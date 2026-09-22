@@ -1,0 +1,12 @@
+# Normaliza finais de linha: LF no repositório, em qualquer sistema.
+# Sem isso o Prettier (endOfLine: lf) e o autocrlf do Git no Windows brigam, e
+# arquivos aparecem modificados sem mudança de conteúdo.
+* text=auto eol=lf
+
+# Binários ficam fora da normalização.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
