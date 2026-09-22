@@ -1,13 +1,190 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+  ADMIN
+}
+
+enum TrainingStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+model User {
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  role         Role    @default(EMPLOYEE)
+
+  // "equipe" é um campo simples de filtro, não uma entidade própria.
+  // Uma entidade Team completa seria complexidade desnecessária pro MVP.
+  team String?
+
+  // Hierarquia Manager -> Employee via self-relation, evita tabela de time separada.
+  managerId String?
+  manager   User?   @relation("ManagerEmployees", fields: [managerId], references: [id])
+  employees User[]  @relation("ManagerEmployees")
+
+  createdAt DateTime @default(now())
+
+  enrollments      Enrollment[]
+  createdTrainings Training[]   @relation("TrainingCreator")
+
+  @@index([managerId])
+  @@map("users")
+}
+
+model Training {
+  id                String         @id @default(uuid())
+  title             String
+  description       String         @db.Text
+  category          String
+  instructor        String
+  estimatedDuration Int // minutos
+  status            TrainingStatus @default(DRAFT)
+
+  createdById String
+  createdBy   User   @relation("TrainingCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  modules     Module[]
+  assessment  Assessment?
+  enrollments Enrollment[]
+
+  @@index([status])
+  @@map("trainings")
+}
+
+model Module {
+  id         String   @id @default(uuid())
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  title       String
+  content     String  @db.Text
+  duration    Int // minutos
+  position    Int
+  materialUrl String?
+
+  progress ModuleProgress[]
+
+  // Garante que não existam dois módulos na mesma posição do mesmo treinamento.
+  // A ordenação é íntegra no banco, não por convenção da aplicação.
+  @@unique([trainingId, position])
+  @@map("modules")
+}
+
+model Enrollment {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  trainingId String
+  training   Training         @relation(fields: [trainingId], references: [id])
+  status     EnrollmentStatus @default(NOT_STARTED)
+  dueDate    DateTime?
+  createdAt  DateTime         @default(now())
+
+  moduleProgress ModuleProgress[]
+  attempts       AssessmentAttempt[]
+
+  // Um usuário não pode ter duas matrículas para o mesmo treinamento.
+  @@unique([userId, trainingId])
+  @@index([status])
+  @@map("enrollments")
+}
+
+model ModuleProgress {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  moduleId     String
+  module       Module     @relation(fields: [moduleId], references: [id])
+  completedAt  DateTime   @default(now())
+
+  // ⚠️ CONSTRAINT CENTRAL DO PROJETO.
+  // Resolve o problema de concorrência: a segunda tentativa de concluir o mesmo
+  // módulo para a mesma matrícula sempre falha aqui, independente de quantas
+  // requisições simultâneas cheguem e de quantas instâncias da app existam.
+  @@unique([enrollmentId, moduleId])
+  @@map("module_progress")
+}
+
+model Assessment {
+  id          String   @id @default(uuid())
+  trainingId  String   @unique
+  training    Training @relation(fields: [trainingId], references: [id])
+  minScore    Int // percentual 0-100
+  maxAttempts Int
+
+  questions Question[]
+  attempts  AssessmentAttempt[]
+
+  @@map("assessments")
+}
+
+model Question {
+  id           String     @id @default(uuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  text         String
+  position     Int
+
+  answers Answer[]
+
+  @@unique([assessmentId, position])
+  @@map("questions")
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean  @default(false)
+
+  @@map("answers")
+}
+
+model AssessmentAttempt {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id])
+  score        Float
+  passed       Boolean
+  createdAt    DateTime   @default(now())
+
+  answers AttemptAnswer[]
+
+  @@index([enrollmentId])
+  @@map("assessment_attempts")
+}
+
+model AttemptAnswer {
+  id         String            @id @default(uuid())
+  attemptId  String
+  attempt    AssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId String
+  answerId   String
+
+  @@map("attempt_answers")
 }
