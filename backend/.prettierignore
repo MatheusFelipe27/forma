@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+prisma/migrations
+package-lock.json
+
+# Diretórios de ferramentas de IA, não são código do projeto
+.agents
+.claude
+.windsurf

@@ -12,11 +12,8 @@
     // "moduleResolution": "node10" — o default de "module": "commonjs" — ignora).
     "module": "nodenext",
     "target": "esnext",
-    "types": [],
-    // For nodejs:
-    // "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    "lib": ["esnext"],
+    "types": ["node"],
 
     // Other Outputs
     "sourceMap": true,
@@ -37,15 +34,14 @@
 
     // Recommended Options
     "strict": true,
-    "jsx": "react-jsx",
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
+    "skipLibCheck": true
   },
 
   // O build compila apenas a aplicação (rootDir: ./src). `prisma/seed.ts` é um
   // script de desenvolvimento executado via tsx e não entra no dist — sem este
   // include ele seria capturado pelo padrão '**/*' e quebraria o rootDir.
-  "include": ["src"],
+  "include": ["src"]
 }

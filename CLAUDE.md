@@ -15,3 +15,8 @@ Leia `docs/FORMA_IMPLEMENTACAO.md` antes de qualquer tarefa. Ele é a fonte de v
 - Implemente UMA fase por vez e pare para revisão.
 - Não antecipe fases futuras.
 - Ao tomar decisão técnica relevante, escreva/atualize a ADR em `docs/adr/`.
+
+## Comentarios
+- Comentar o PORQUE (decisoes, trade-offs, regras de negocio nao-obvias), nunca o QUE o codigo ja diz.
+- Decisoes grandes vivem nas ADRs; no codigo, so uma referencia curta (ex: 'ver ADR 004').
+- Sem comentarios obvios tipo '// importa o express' ou '// cria variavel'.

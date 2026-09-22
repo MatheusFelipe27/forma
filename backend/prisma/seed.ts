@@ -1,21 +1,9 @@
-/**
- * Seed de desenvolvimento do Forma.
- *
- * Objetivo: deixar o banco com dados suficientes para nenhuma tela nascer vazia
- * (dashboards, listagens, progresso parcial, avaliação aprovada e reprovada).
- *
- * Duas decisões seguidas aqui, coerentes com o documento de implementação:
- *
- * 1. Progresso NÃO é semeado como percentual. O que existe no banco são linhas
- *    em `module_progress`; o percentual é calculado na leitura.
- * 2. `OVERDUE` NÃO é gravado em `enrollments.status`. O banco guarda apenas
- *    NOT_STARTED | IN_PROGRESS | COMPLETED — o atraso é derivado de
- *    `dueDate < now()` no Service. Por isso as matrículas atrasadas deste seed
- *    têm `dueDate` no passado e status IN_PROGRESS/NOT_STARTED.
- *
- * O seed é idempotente por truncamento: limpa as tabelas e recria tudo, para
- * poder rodar quantas vezes forem necessárias durante o desenvolvimento.
- */
+// Idempotente por truncamento: limpa e recria, para rodar quantas vezes forem
+// necessárias durante o desenvolvimento.
+//
+// Sem percentual de progresso e sem status OVERDUE gravados — ambos são
+// calculados na leitura (ver ADR 007). As matrículas atrasadas são representadas
+// por `dueDate` no passado.
 import { PrismaClient, Role, TrainingStatus, EnrollmentStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
@@ -29,11 +17,8 @@ const DAY = 24 * 60 * 60 * 1000;
 const now = Date.now();
 const daysFromNow = (days: number): Date => new Date(now + days * DAY);
 
-/**
- * `noUncheckedIndexedAccess` faz todo acesso por índice/chave devolver
- * `T | undefined`. Em vez de espalhar `!` pelo arquivo, falhamos alto: se uma
- * referência do seed não existe, o dado semeado está inconsistente.
- */
+// Alternativa a espalhar `!` pelo arquivo sob `noUncheckedIndexedAccess`:
+// referência ausente significa dado de seed inconsistente, então falha alto.
 function required<T>(value: T | undefined, what: string): T {
   if (value === undefined) {
     throw new Error(`Seed inconsistente: ${what} não encontrado.`);
@@ -42,8 +27,7 @@ function required<T>(value: T | undefined, what: string): T {
 }
 
 async function reset(): Promise<void> {
-  // Ordem inversa das dependências. Há cascatas no schema, mas apagar
-  // explicitamente deixa o efeito óbvio para quem lê.
+  // Ordem inversa das dependências; explícito mesmo onde há cascata.
   await prisma.attemptAnswer.deleteMany();
   await prisma.assessmentAttempt.deleteMany();
   await prisma.moduleProgress.deleteMany();
@@ -73,10 +57,20 @@ const EMPLOYEE_SPECS: EmployeeSpec[] = [
   { name: 'Elisa Moraes', email: 'elisa.moraes@forma.dev', team: 'Engenharia', manager: 'ana' },
   { name: 'Felipe Antunes', email: 'felipe.antunes@forma.dev', team: 'Engenharia', manager: 'ana' },
   { name: 'Gabriela Reis', email: 'gabriela.reis@forma.dev', team: 'Engenharia', manager: 'ana' },
-  { name: 'Henrique Lopes', email: 'henrique.lopes@forma.dev', team: 'Comercial', manager: 'bruno' },
+  {
+    name: 'Henrique Lopes',
+    email: 'henrique.lopes@forma.dev',
+    team: 'Comercial',
+    manager: 'bruno',
+  },
   { name: 'Isabela Nunes', email: 'isabela.nunes@forma.dev', team: 'Comercial', manager: 'bruno' },
   { name: 'João Barreto', email: 'joao.barreto@forma.dev', team: 'Comercial', manager: 'bruno' },
-  { name: 'Karina Vasques', email: 'karina.vasques@forma.dev', team: 'Comercial', manager: 'bruno' },
+  {
+    name: 'Karina Vasques',
+    email: 'karina.vasques@forma.dev',
+    team: 'Comercial',
+    manager: 'bruno',
+  },
   { name: 'Lucas Ferraz', email: 'lucas.ferraz@forma.dev', team: 'Comercial', manager: 'bruno' },
 ];
 
@@ -476,7 +470,7 @@ const ENROLLMENT_SPECS: EnrollmentSpec[] = [
     dueInDays: 30,
   },
   {
-    // Atrasada: dueDate no passado. O status OVERDUE é derivado na leitura.
+    // Atrasada.
     userEmail: 'felipe.antunes@forma.dev',
     trainingTitle: 'Segurança da Informação na Prática',
     status: EnrollmentStatus.IN_PROGRESS,
@@ -602,12 +596,8 @@ const ENROLLMENT_SPECS: EnrollmentSpec[] = [
   },
 ];
 
-/**
- * Monta as respostas de uma tentativa a partir da nota desejada: acerta as
- * primeiras `Math.round(score/100 * total)` questões e erra o resto. Assim a
- * tentativa semeada é coerente com as respostas gravadas — o cálculo real do
- * score continua sendo responsabilidade do Service (Fase 7).
- */
+// Existe para a nota gravada bater com as respostas gravadas; o cálculo real do
+// score é responsabilidade do Service (Fase 7).
 function answersForScore(
   assessment: NonNullable<SeededTraining['assessment']>,
   score: number,
