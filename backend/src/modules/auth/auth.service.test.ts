@@ -15,6 +15,7 @@ function repositoryWith(user: User | null): UsersRepository {
   return {
     findByEmail: (email) => Promise.resolve(user && user.email === email ? user : null),
     findById: (id) => Promise.resolve(user && user.id === id ? user : null),
+    findExistingIds: (ids) => Promise.resolve(user && ids.includes(user.id) ? [user.id] : []),
   };
 }
 
