@@ -50,6 +50,7 @@ function repositoryFor(training: TrainingWithModules | null) {
       Promise.resolve({ ...trainingWith(DRAFT), id, ...data } as Training),
     ),
     countModules: vi.fn(() => Promise.resolve(training?.modules.length ?? 0)),
+    countAssessmentQuestions: vi.fn(() => Promise.resolve(null)),
   };
 
   return { repository, service: createTrainingsService(repository) };

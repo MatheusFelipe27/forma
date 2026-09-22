@@ -32,6 +32,8 @@ export type TrainingsRepository = {
   create: (data: TrainingCreateData) => Promise<Training>;
   update: (id: string, data: TrainingUpdateData) => Promise<Training>;
   countModules: (trainingId: string) => Promise<number>;
+  /** `null` quando o treinamento não tem avaliação. */
+  countAssessmentQuestions: (trainingId: string) => Promise<number | null>;
 };
 
 export const trainingsRepository: TrainingsRepository = {
@@ -68,5 +70,14 @@ export const trainingsRepository: TrainingsRepository = {
 
   countModules(trainingId) {
     return prisma.module.count({ where: { trainingId } });
+  },
+
+  async countAssessmentQuestions(trainingId) {
+    const assessment = await prisma.assessment.findUnique({
+      where: { trainingId },
+      select: { _count: { select: { questions: true } } },
+    });
+
+    return assessment?._count.questions ?? null;
   },
 };

@@ -102,6 +102,10 @@ model Enrollment {
   dueDate    DateTime?
   createdAt  DateTime         @default(now())
 
+  // Tentativas extras concedidas por Manager/Admin ao desbloquear a matrícula.
+  // Limite efetivo = assessment.maxAttempts + extraAttempts. Ver ADR 010.
+  extraAttempts Int @default(0)
+
   moduleProgress ModuleProgress[]
   attempts       AssessmentAttempt[]
 
@@ -130,7 +134,8 @@ model ModuleProgress {
 model Assessment {
   id          String   @id @default(uuid())
   trainingId  String   @unique
-  training    Training @relation(fields: [trainingId], references: [id])
+  // Cascade por simetria com Module: a avaliação não existe sem o treinamento.
+  training    Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
   minScore    Int // percentual 0-100
   maxAttempts Int
 

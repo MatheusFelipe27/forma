@@ -53,6 +53,7 @@ function detail({
     status,
     dueDate,
     createdAt: new Date(),
+    extraAttempts: 0,
     user: { id: OWNER.id, name: 'Camila', email: 'camila@forma.dev' },
     training: {
       id: 'training-1',

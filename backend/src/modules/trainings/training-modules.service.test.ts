@@ -43,6 +43,7 @@ function setup(status: TrainingStatus, existingModule: Module | null = moduleOf(
     create: vi.fn(),
     update: vi.fn(),
     countModules: vi.fn(() => Promise.resolve(0)),
+    countAssessmentQuestions: vi.fn(() => Promise.resolve(null)),
   };
 
   const modulesRepository: TrainingModulesRepository = {

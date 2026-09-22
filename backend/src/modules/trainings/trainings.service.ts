@@ -123,6 +123,16 @@ export function createTrainingsService(repository: TrainingsRepository = trainin
         );
       }
 
+      // Avaliação sem perguntas tornaria a conclusão inalcançável: todo score
+      // sairia 0 e nenhuma tentativa atingiria o mínimo.
+      if (status === PUBLISHED && (await repository.countAssessmentQuestions(id)) === 0) {
+        throw new AppError(
+          'A avaliação deste treinamento não possui perguntas.',
+          409,
+          'ASSESSMENT_WITHOUT_QUESTIONS',
+        );
+      }
+
       return repository.update(id, { status });
     },
 
