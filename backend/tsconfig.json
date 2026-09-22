@@ -43,5 +43,8 @@
   // O build compila apenas a aplicação (rootDir: ./src). `prisma/seed.ts` é um
   // script de desenvolvimento executado via tsx e não entra no dist — sem este
   // include ele seria capturado pelo padrão '**/*' e quebraria o rootDir.
-  "include": ["src"]
+  "include": ["src"],
+
+  // Testes ficam ao lado do código que testam, mas não vão para o dist.
+  "exclude": ["src/**/*.test.ts"]
 }

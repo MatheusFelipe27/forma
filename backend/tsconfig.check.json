@@ -1,0 +1,10 @@
+// Usado por `lint` e `typecheck`. O tsconfig.json cobre só o que vai para o
+// dist; aqui entram também os testes e os scripts fora do build.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src", "prisma", "eslint.config.mjs"],
+  "exclude": []
+}
