@@ -3,6 +3,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 
 import { createAuthRoutes } from './modules/auth/auth.routes';
+import { createTrainingsRoutes } from './modules/trainings/trainings.routes';
 import { healthRoutes } from './shared/http/health.routes';
 import { errorHandler, notFoundHandler } from './shared/middleware/error-handler';
 
@@ -17,6 +18,7 @@ export function createApp(): Express {
 
   app.use(healthRoutes);
   app.use(createAuthRoutes());
+  app.use(createTrainingsRoutes());
 
   // Ordem obrigatória: 404 antes do handler de erro, ambos depois das rotas.
   app.use(notFoundHandler);
