@@ -1,0 +1,12 @@
+@'
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+'@ | Out-File -FilePath .gitignore -Encoding utf8
+docs/FORMA_IMPLEMENTACAO.md
+docs/FORMA_PROJETO.md
