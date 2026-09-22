@@ -1,0 +1,9 @@
+// O tsconfig.json cobre só `src` (o que vai para o dist). O ESLint usa regras
+// com type-checking e precisa enxergar também os scripts fora do build.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src", "prisma", "eslint.config.mjs"]
+}
