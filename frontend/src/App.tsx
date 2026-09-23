@@ -1,122 +1,95 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-function App() {
-  const [count, setCount] = useState(0)
+import { AuthProvider } from './auth/AuthProvider'
+import { AppShell } from './layout/AppShell'
+import { LoginPage } from './pages/LoginPage'
+import { NotFoundPage } from './pages/NotFoundPage'
+import { PlaceholderPage } from './pages/PlaceholderPage'
+import { PATHS } from './routes/navigation'
+import { ProtectedRoute } from './routes/ProtectedRoute'
 
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path={PATHS.login} element={<LoginPage />} />
 
-      <div className="ticks"></div>
+          {/* Exige apenas sessão. */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppShell />}>
+              <Route
+                path={PATHS.home}
+                element={
+                  <PlaceholderPage
+                    title="Início"
+                    description="Seu progresso nos treinamentos atribuídos."
+                  />
+                }
+              />
+              <Route
+                path={PATHS.myTrainings}
+                element={
+                  <PlaceholderPage
+                    title="Meus Treinamentos"
+                    description="Treinamentos atribuídos a você e seu andamento."
+                  />
+                }
+              />
+              <Route
+                path={PATHS.catalog}
+                element={
+                  <PlaceholderPage
+                    title="Catálogo"
+                    description="Treinamentos publicados disponíveis."
+                  />
+                }
+              />
+            </Route>
+          </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {/* Exige papel de gestão. */}
+          <Route element={<ProtectedRoute roles={['MANAGER', 'ADMIN']} />}>
+            <Route element={<AppShell />}>
+              <Route
+                path={PATHS.team}
+                element={
+                  <PlaceholderPage
+                    title="Equipe"
+                    description="Situação de cada pessoa da sua equipe."
+                  />
+                }
+              />
+              <Route
+                path={PATHS.assign}
+                element={
+                  <PlaceholderPage
+                    title="Atribuir"
+                    description="Atribua um treinamento a um ou mais funcionários."
+                  />
+                }
+              />
+            </Route>
+          </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+            <Route element={<AppShell />}>
+              <Route
+                path={PATHS.audit}
+                element={
+                  <PlaceholderPage
+                    title="Auditoria"
+                    description="Registro das ações administrativas."
+                  />
+                }
+              />
+            </Route>
+          </Route>
+
+          <Route path="/" element={<Navigate to={PATHS.home} replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
-
-export default App
