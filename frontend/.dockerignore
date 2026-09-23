@@ -1,0 +1,14 @@
+node_modules
+dist
+
+# O Vite lê .env no build; deixá-lo entrar na imagem sobrescreveria o
+# VITE_API_URL passado como argumento de build.
+.env
+.env.*
+
+.git
+.gitignore
+Dockerfile
+.dockerignore
+
+*.log

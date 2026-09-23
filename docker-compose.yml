@@ -1,4 +1,4 @@
-﻿services:
+services:
   postgres:
     image: postgres:16-alpine
     environment:
@@ -16,6 +16,46 @@
     image: mongo:7
     ports: ["27017:27017"]
     volumes: [mongodata:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+      PORT: 3333
+      # Nomes dos serviços, não localhost: dentro da rede do compose cada
+      # container tem o próprio localhost.
+      DATABASE_URL: postgresql://forma:forma@postgres:5432/forma?schema=public
+      MONGO_URL: mongodb://mongo:27017/forma_audit
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+    ports: ["3333:3333"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # A API sobe mesmo com o Mongo fora (auditoria é best-effort, ADR 006);
+      # esperar aqui é só para o primeiro boot já ter auditoria funcionando.
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3333/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    ports: ["8080:80"]
+    depends_on:
+      backend:
+        condition: service_started
 
 volumes:
   pgdata:
