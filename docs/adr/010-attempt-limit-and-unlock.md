@@ -19,9 +19,8 @@ mora, como é protegido sob concorrência, e quando pode ser destruído.
 
 ### Problema
 
-O schema definido na seção 3 do guia de implementação não tem campo para
-representar "esta matrícula recebeu tentativas extras". O estado precisa morar em
-algum lugar.
+O modelo de dados definido no início do projeto não tem campo para representar
+"esta matrícula recebeu tentativas extras". O estado precisa morar em algum lugar.
 
 ### Alternativas
 
@@ -32,6 +31,16 @@ algum lugar.
 
 **C. `extraAttempts Int @default(0)` em `Enrollment`.** Limite efetivo =
 `assessment.maxAttempts + enrollment.extraAttempts`.
+
+### Critérios
+
+1. **Preservação do histórico** — as reprovações são o dado que justifica o
+   desbloqueio; critério eliminatório.
+2. **Granularidade da concessão** — conseguir liberar uma única tentativa, não só
+   devolver o lote inteiro.
+3. **Legibilidade do limite efetivo** — quanto de código é preciso ler para saber
+   quantas tentativas a matrícula tem.
+4. **Tamanho da mudança no schema**, que o modelo original não previa.
 
 ### Decisão
 
@@ -90,6 +99,16 @@ pode passar.
 **C. Lock de linha da matrícula** (`SELECT ... FOR UPDATE`) dentro da transação.
 
 **D. Isolamento serializável** na transação.
+
+### Critérios
+
+1. **Correção sob concorrência** — o teto não pode ser estourado; critério
+   eliminatório.
+2. **Infraestrutura adicional** — o MVP não admite Redis nem lock distribuído.
+3. **Escopo do bloqueio** — submissões de matrículas diferentes não podem se
+   penalizar entre si.
+4. **Complexidade de implementação** — tratamento de erro e reexecução que a
+   solução obriga a escrever.
 
 ### Decisão
 
@@ -172,6 +191,15 @@ avaliação falhava com
 `Foreign key constraint violated on the constraint: assessments_trainingId_fkey`,
 porque `Module` tinha `onDelete: Cascade` e `Assessment` não.
 
+### Critérios
+
+1. **Natureza do dado** — conteúdo que só existe dentro do treinamento, ou registro
+   do que uma pessoa real fez; é o critério que decide cada relação.
+2. **Consequência de um erro do operador** — o que se perde, e se dá para desfazer,
+   quando alguém apaga o treinamento errado.
+3. **Existência de alternativa que atenda sem destruir** — se tirar do catálogo
+   resolve, apagar não precisa ser possível.
+
 ### Decisão
 
 **Cascade a partir de `Training` para `Assessment`. Sem cascade para
@@ -220,10 +248,9 @@ Hoje a ordem de bloqueio ao tentar apagar um treinamento é:
 
 ### O caminho correto é arquivar, não apagar
 
-`ARCHIVED` já existe e tem exatamente a semântica necessária (seção 5 do guia de
-implementação, "Status de treinamento"): o treinamento sai do catálogo,
-não aceita novas matrículas, e **as matrículas existentes continuam válidas** —
-quem estava no meio termina, quem concluiu mantém o registro.
+`ARCHIVED` já existe e tem exatamente a semântica necessária: o treinamento sai do
+catálogo, não aceita novas matrículas, e **as matrículas existentes continuam
+válidas** — quem estava no meio termina, quem concluiu mantém o registro.
 
 ```
 PATCH /trainings/:id/status  { "status": "ARCHIVED" }
