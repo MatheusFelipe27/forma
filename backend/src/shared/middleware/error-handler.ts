@@ -35,9 +35,12 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   const { statusCode, body } = describe(error);
 
   // Registrar o erro inteiro no servidor é o que permite manter a resposta
-  // ao cliente genérica.
+  // ao cliente genérica. Um AppError 5xx é falha prevista (dependência fora, por
+  // exemplo) e não deve ser confundido com bug no log.
   if (statusCode >= 500) {
-    console.error(`[${req.method} ${req.originalUrl}] erro não tratado:`, error);
+    const rotulo = error instanceof AppError ? `falha ${error.code}` : 'erro não tratado';
+
+    console.error(`[${req.method} ${req.originalUrl}] ${rotulo}:`, error);
   }
 
   res.status(statusCode).json(body);
