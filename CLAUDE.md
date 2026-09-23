@@ -1,6 +1,6 @@
 ﻿# Forma — instruções do projeto
 
-Leia `docs/FORMA_IMPLEMENTACAO.md` antes de qualquer tarefa. Ele é a fonte de verdade.
+Consulte a documentação do projeto antes de qualquer tarefa: o `README.md` e as ADRs em `docs/adr/`. As ADRs são a fonte de verdade das decisões técnicas.
 
 ## Regras não-negociáveis
 - Arquitetura: monólito modular, camadas Controller -> Service -> Repository.

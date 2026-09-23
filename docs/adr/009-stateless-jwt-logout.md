@@ -3,9 +3,6 @@
 **Status:** aceita
 **Data:** 2026-09-22
 
-> Numerada 009 porque 002 e 004–008 estão reservadas na seção 8 do guia de
-> implementação para temas já definidos.
-
 ## Contexto
 
 A Fase 5 exige login, logout e identificação do usuário autenticado, com

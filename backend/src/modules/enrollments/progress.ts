@@ -31,7 +31,7 @@ export function calculateProgress(completedModules: number, totalModules: number
   };
 }
 
-// Treinamento sem avaliação depende apenas dos módulos (FORMA_PROJETO seção 13).
+// Treinamento sem avaliação depende apenas dos módulos (ver ADR 007).
 export function canCompleteTraining({
   completedModules,
   totalModules,
