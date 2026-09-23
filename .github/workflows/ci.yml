@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Um push novo no mesmo branch cancela a execução anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: forma
+          POSTGRES_PASSWORD: forma
+          POSTGRES_DB: forma_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U forma"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # Sem --health-cmd aqui: a expressão do mongosh precisa de aspas aninhadas
+      # dentro de `options`, o que é frágil. A espera é feita por um passo
+      # explícito abaixo.
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+
+    env:
+      NODE_ENV: test
+      PORT: 3333
+      DATABASE_URL: postgresql://forma:forma@localhost:5432/forma_test?schema=public
+      MONGO_URL: mongodb://localhost:27017/forma_audit_test
+      # O schema Zod exige no mínimo 16 caracteres; é um valor de teste.
+      JWT_SECRET: segredo-de-integracao-continua-do-forma
+      JWT_EXPIRES_IN: 1d
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      # Precisa vir antes do lint e do typecheck: as regras com type-checking e
+      # o tsc dependem dos tipos gerados do Prisma Client.
+      - name: Gerar Prisma Client
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Aguardar MongoDB
+        run: |
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/27017) 2>/dev/null; then
+              echo "MongoDB respondendo."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "MongoDB não respondeu em 30s." >&2
+          exit 1
+
+      # `migrate deploy` aplica as migrations existentes sem gerar novas nem
+      # pedir confirmação. Os testes de integração criam os próprios dados, então
+      # o banco não precisa de seed.
+      - name: Aplicar migrations
+        run: npx prisma migrate deploy
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    env:
+      # `.env` não é versionado; sem isto o build sairia com a baseURL indefinida.
+      VITE_API_URL: /api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
