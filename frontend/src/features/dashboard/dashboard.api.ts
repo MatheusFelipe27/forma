@@ -20,3 +20,25 @@ export async function fetchMyDashboard(): Promise<MyDashboard> {
 
   return data
 }
+
+export type TeamMember = {
+  id: string
+  name: string
+  email: string
+  team: string | null
+  tally: StatusTally
+  averageProgress: number
+}
+
+export type TeamDashboard = {
+  teamSize: number
+  tally: StatusTally
+  averageProgress: number
+  members: TeamMember[]
+}
+
+export async function fetchTeamDashboard(): Promise<TeamDashboard> {
+  const { data } = await api.get<TeamDashboard>('/dashboard/team')
+
+  return data
+}

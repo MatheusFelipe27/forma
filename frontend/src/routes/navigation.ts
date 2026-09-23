@@ -54,6 +54,10 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ]
 
+export function teamMemberPath(userId: string): string {
+  return `${PATHS.team}/${userId}`
+}
+
 export function navItemsFor(role: Role): NavItem[] {
   return NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role))
 }

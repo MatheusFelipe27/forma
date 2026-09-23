@@ -3,12 +3,15 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { ToastProvider } from './components/toast/ToastProvider'
 import { AppShell } from './layout/AppShell'
+import { AssignPage } from './pages/AssignPage'
+import { AuditPage } from './pages/AuditPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EnrollmentDetailPage } from './pages/EnrollmentDetailPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyTrainingsPage } from './pages/MyTrainingsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
+import { TeamMemberPage } from './pages/TeamMemberPage'
+import { TeamPage } from './pages/TeamPage'
 import { PATHS } from './routes/navigation'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
@@ -32,38 +35,15 @@ export default function App() {
             {/* Exige papel de gestão. */}
             <Route element={<ProtectedRoute roles={['MANAGER', 'ADMIN']} />}>
               <Route element={<AppShell />}>
-                <Route
-                  path={PATHS.team}
-                  element={
-                    <PlaceholderPage
-                      title="Equipe"
-                      description="Situação de cada pessoa da sua equipe."
-                    />
-                  }
-                />
-                <Route
-                  path={PATHS.assign}
-                  element={
-                    <PlaceholderPage
-                      title="Atribuir"
-                      description="Atribua um treinamento a um ou mais funcionários."
-                    />
-                  }
-                />
+                <Route path={PATHS.team} element={<TeamPage />} />
+                <Route path={`${PATHS.team}/:userId`} element={<TeamMemberPage />} />
+                <Route path={PATHS.assign} element={<AssignPage />} />
               </Route>
             </Route>
 
             <Route element={<ProtectedRoute roles={['ADMIN']} />}>
               <Route element={<AppShell />}>
-                <Route
-                  path={PATHS.audit}
-                  element={
-                    <PlaceholderPage
-                      title="Auditoria"
-                      description="Registro das ações administrativas."
-                    />
-                  }
-                />
+                <Route path={PATHS.audit} element={<AuditPage />} />
               </Route>
             </Route>
 

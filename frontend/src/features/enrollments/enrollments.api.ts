@@ -14,6 +14,16 @@ export async function fetchMyEnrollments(): Promise<Paginated<EnrollmentListItem
   return data
 }
 
+export async function fetchEnrollmentsForUser(
+  userId: string,
+): Promise<Paginated<EnrollmentListItem>> {
+  const { data } = await api.get<Paginated<EnrollmentListItem>>('/enrollments', {
+    params: { userId, limit: 100 },
+  })
+
+  return data
+}
+
 export async function fetchEnrollment(id: string): Promise<EnrollmentDetail> {
   const { data } = await api.get<EnrollmentDetail>(`/enrollments/${id}`)
 

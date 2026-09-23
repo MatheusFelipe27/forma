@@ -1,4 +1,14 @@
 const DATE_FORMAT = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })
+const DATE_TIME_FORMAT = new Intl.DateTimeFormat('pt-BR', {
+  dateStyle: 'short',
+  timeStyle: 'short',
+})
+
+export function formatDateTime(value: string): string {
+  const date = new Date(value)
+
+  return Number.isNaN(date.getTime()) ? '—' : DATE_TIME_FORMAT.format(date)
+}
 
 export function formatDate(value: string | null): string | null {
   if (!value) {

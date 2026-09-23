@@ -57,6 +57,27 @@ export async function fetchAttempts(enrollmentId: string): Promise<AttemptsOverv
   return data
 }
 
+export type UnlockResult = {
+  enrollmentId: string
+  granted: number
+  extraAttempts: number
+  attemptsUsed: number
+  attemptsAllowed: number
+  attemptsRemaining: number
+}
+
+export async function unlockAttempts(
+  enrollmentId: string,
+  extraAttempts: number,
+): Promise<UnlockResult> {
+  const { data } = await api.post<UnlockResult>(
+    `/enrollments/${enrollmentId}/attempts/unlock`,
+    { extraAttempts },
+  )
+
+  return data
+}
+
 export async function submitAttempt(
   enrollmentId: string,
   answers: { questionId: string; answerId: string }[],
