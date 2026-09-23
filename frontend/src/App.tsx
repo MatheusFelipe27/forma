@@ -12,6 +12,9 @@ import { MyTrainingsPage } from './pages/MyTrainingsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { TeamMemberPage } from './pages/TeamMemberPage'
 import { TeamPage } from './pages/TeamPage'
+import { TrainingCreatePage } from './pages/TrainingCreatePage'
+import { TrainingEditPage } from './pages/TrainingEditPage'
+import { TrainingsManagePage } from './pages/TrainingsManagePage'
 import { PATHS } from './routes/navigation'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
@@ -38,6 +41,9 @@ export default function App() {
                 <Route path={PATHS.team} element={<TeamPage />} />
                 <Route path={`${PATHS.team}/:userId`} element={<TeamMemberPage />} />
                 <Route path={PATHS.assign} element={<AssignPage />} />
+                <Route path={PATHS.trainings} element={<TrainingsManagePage />} />
+                <Route path={PATHS.trainingNew} element={<TrainingCreatePage />} />
+                <Route path={`${PATHS.trainings}/:id`} element={<TrainingEditPage />} />
               </Route>
             </Route>
 

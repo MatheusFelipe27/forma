@@ -6,6 +6,8 @@ export const PATHS = {
   myTrainings: '/meus-treinamentos',
   team: '/equipe',
   assign: '/atribuir',
+  trainings: '/gerenciar',
+  trainingNew: '/gerenciar/novo',
   audit: '/auditoria',
 } as const
 
@@ -47,6 +49,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'M12 5v14M5 12h14',
   },
   {
+    label: 'Gerenciar Treinamentos',
+    to: PATHS.trainings,
+    roles: ['MANAGER', 'ADMIN'],
+    icon: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5.5A1.5 1.5 0 0 1 4 18.5v-13ZM12 9v6M9 12h6',
+  },
+  {
     label: 'Auditoria',
     to: PATHS.audit,
     roles: ['ADMIN'],
@@ -56,6 +64,10 @@ export const NAV_ITEMS: NavItem[] = [
 
 export function teamMemberPath(userId: string): string {
   return `${PATHS.team}/${userId}`
+}
+
+export function trainingManagePath(trainingId: string): string {
+  return `${PATHS.trainings}/${trainingId}`
 }
 
 export function navItemsFor(role: Role): NavItem[] {
