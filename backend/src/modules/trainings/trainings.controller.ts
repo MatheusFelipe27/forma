@@ -40,7 +40,7 @@ export function createTrainingsController(service: TrainingsService = trainingsS
     const { id } = trainingIdParamSchema.parse(req.params);
     const { status } = changeStatusSchema.parse(req.body);
 
-    res.status(200).json(await service.changeStatus(id, status));
+    res.status(200).json(await service.changeStatus(id, status, getAuthenticatedUser(req)));
   };
 
   return { list, getById, create, update, changeStatus };

@@ -3,6 +3,7 @@ import { Role, TrainingStatus, type Enrollment } from '@prisma/client';
 import { isUniqueViolation } from '../../shared/database/prisma-errors';
 import { AppError } from '../../shared/errors/AppError';
 import type { AuthenticatedUser } from '../../shared/types/express';
+import { auditService, type AuditService } from '../audit/audit.service';
 import { usersRepository, type UsersRepository } from '../users/users.repository';
 import { trainingsRepository, type TrainingsRepository } from '../trainings/trainings.repository';
 import {
@@ -40,12 +41,14 @@ export type EnrollmentsServiceDeps = {
   enrollments?: EnrollmentsRepository;
   trainings?: TrainingsRepository;
   users?: UsersRepository;
+  audit?: AuditService;
 };
 
 export function createEnrollmentsService({
   enrollments = enrollmentsRepository,
   trainings = trainingsRepository,
   users = usersRepository,
+  audit = auditService,
 }: EnrollmentsServiceDeps = {}) {
   // Só PUBLISHED aceita nova matrícula. ARCHIVED recusa, mas as matrículas que
   // já existem seguem válidas — por isso a checagem só acontece na criação.
@@ -151,7 +154,7 @@ export function createEnrollmentsService({
       }
     },
 
-    async assign(input: AssignTrainingInput): Promise<AssignmentResult> {
+    async assign(input: AssignTrainingInput, actor: AuthenticatedUser): Promise<AssignmentResult> {
       // Duplicatas no próprio payload contariam como "ignoradas" e confundiriam
       // o relatório devolvido ao Manager.
       const userIds = [...new Set(input.userIds)];
@@ -163,6 +166,20 @@ export function createEnrollmentsService({
         trainingId: input.trainingId,
         userIds,
         dueDate: input.dueDate ?? null,
+      });
+
+      await audit.record(actor, {
+        action: 'ASSIGN_TRAINING',
+        resourceType: 'Training',
+        resourceId: input.trainingId,
+        description: `Treinamento atribuído a ${userIds.length} funcionário(s): ${created} nova(s), ${userIds.length - created} já existente(s).`,
+        metadata: {
+          requested: userIds.length,
+          created,
+          skipped: userIds.length - created,
+          userIds,
+          dueDate: input.dueDate ?? null,
+        },
       });
 
       return {

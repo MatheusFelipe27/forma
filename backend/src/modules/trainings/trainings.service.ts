@@ -2,6 +2,7 @@ import { Role, TrainingStatus, type Training } from '@prisma/client';
 
 import { AppError } from '../../shared/errors/AppError';
 import type { AuthenticatedUser } from '../../shared/types/express';
+import { auditService, type AuditService } from '../audit/audit.service';
 import {
   trainingsRepository,
   type TrainingsRepository,
@@ -51,7 +52,10 @@ export function assertEditable(training: Training): void {
   }
 }
 
-export function createTrainingsService(repository: TrainingsRepository = trainingsRepository) {
+export function createTrainingsService(
+  repository: TrainingsRepository = trainingsRepository,
+  audit: AuditService = auditService,
+) {
   async function findEditable(id: string): Promise<TrainingWithModules> {
     const training = await repository.findById(id);
 
@@ -95,7 +99,11 @@ export function createTrainingsService(repository: TrainingsRepository = trainin
       return repository.update(id, input);
     },
 
-    async changeStatus(id: string, status: TrainingStatus): Promise<Training> {
+    async changeStatus(
+      id: string,
+      status: TrainingStatus,
+      actor: AuthenticatedUser,
+    ): Promise<Training> {
       const training = await repository.findById(id);
 
       if (!training) {
@@ -133,7 +141,22 @@ export function createTrainingsService(repository: TrainingsRepository = trainin
         );
       }
 
-      return repository.update(id, { status });
+      const updated = await repository.update(id, { status });
+
+      // Só transições efetivas são auditadas — o no-op acima já retornou.
+      if (status === PUBLISHED || status === ARCHIVED) {
+        await audit.record(actor, {
+          action: status === PUBLISHED ? 'PUBLISH_TRAINING' : 'ARCHIVE_TRAINING',
+          resourceType: 'Training',
+          resourceId: id,
+          description: `Treinamento "${training.title}" ${
+            status === PUBLISHED ? 'publicado' : 'arquivado'
+          }.`,
+          metadata: { from: training.status, to: status },
+        });
+      }
+
+      return updated;
     },
 
     findEditable,

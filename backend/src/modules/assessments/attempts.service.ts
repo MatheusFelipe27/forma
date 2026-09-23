@@ -2,6 +2,7 @@ import { Role, type AssessmentAttempt } from '@prisma/client';
 
 import { AppError } from '../../shared/errors/AppError';
 import type { AuthenticatedUser } from '../../shared/types/express';
+import { auditService, type AuditService } from '../audit/audit.service';
 import {
   enrollmentsRepository,
   type EnrollmentDetail,
@@ -46,6 +47,7 @@ export type AttemptsServiceDeps = {
   assessments?: AssessmentsRepository;
   enrollments?: EnrollmentsRepository;
   progress?: ModuleProgressRepository;
+  audit?: AuditService;
 };
 
 export function createAttemptsService({
@@ -53,6 +55,7 @@ export function createAttemptsService({
   assessments = assessmentsRepository,
   enrollments = enrollmentsRepository,
   progress = moduleProgressRepository,
+  audit = auditService,
 }: AttemptsServiceDeps = {}) {
   async function requireEnrollment(id: string): Promise<EnrollmentDetail> {
     const enrollment = await enrollments.findById(id);
@@ -268,7 +271,7 @@ export function createAttemptsService({
 
     // Desbloqueio concede tentativas em vez de apagar as existentes: o histórico
     // de reprovações é dado de auditoria (ADR 010).
-    async unlock(enrollmentId: string, input: UnlockAttemptsInput) {
+    async unlock(enrollmentId: string, input: UnlockAttemptsInput, actor: AuthenticatedUser) {
       const enrollment = await requireEnrollment(enrollmentId);
       const assessment = await assessments.findByTrainingId(enrollment.trainingId);
 
@@ -279,6 +282,21 @@ export function createAttemptsService({
       const extraAttempts = await attempts.grantExtraAttempts(enrollmentId, input.extraAttempts);
       const attemptsUsed = await attempts.countByEnrollment(enrollmentId);
       const attemptsAllowed = assessment.maxAttempts + extraAttempts;
+
+      await audit.record(actor, {
+        action: 'UNLOCK_ATTEMPTS',
+        resourceType: 'Enrollment',
+        resourceId: enrollmentId,
+        description: `${input.extraAttempts} tentativa(s) extra concedida(s) para ${enrollment.user.name}.`,
+        metadata: {
+          granted: input.extraAttempts,
+          extraAttempts,
+          attemptsUsed,
+          attemptsAllowed,
+          targetUserId: enrollment.userId,
+          trainingId: enrollment.trainingId,
+        },
+      });
 
       return {
         enrollmentId,

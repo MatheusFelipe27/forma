@@ -410,7 +410,7 @@ describe('desbloqueio', () => {
   it('concede tentativas extras sem apagar o histórico', async () => {
     const { attempts, service } = setup({ maxAttempts: 2, attemptsUsed: 2 });
 
-    const result = await service.unlock('enrollment-1', { extraAttempts: 2 });
+    const result = await service.unlock('enrollment-1', { extraAttempts: 2 }, MANAGER);
 
     expect(attempts.grantExtraAttempts).toHaveBeenCalledWith('enrollment-1', 2);
     expect(result).toMatchObject({ granted: 2, attemptsAllowed: 4, attemptsRemaining: 2 });

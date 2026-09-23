@@ -64,7 +64,9 @@ export type EnrollmentsRepository = {
   updateStatus: (id: string, status: EnrollmentStatus) => Promise<Enrollment>;
 };
 
-const listSelect = {
+// Exportado para o Dashboard reaproveitar a mesma forma e, com ela, as mesmas
+// funções de derivação de status e progresso.
+export const enrollmentListInclude = {
   user: { select: { id: true, name: true, email: true } },
   training: {
     select: {
@@ -95,7 +97,7 @@ export const enrollmentsRepository: EnrollmentsRepository = {
         skip,
         take,
         orderBy: { createdAt: 'desc' },
-        include: listSelect,
+        include: enrollmentListInclude,
       }),
       prisma.enrollment.count({ where }),
     ]);

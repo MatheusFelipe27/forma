@@ -1,7 +1,9 @@
-import { Role, TrainingStatus, type Training } from '@prisma/client';
+import { Role, TrainingStatus, type Training, type User } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AuthenticatedUser } from '../../shared/types/express';
+import { createAuditService } from '../audit/audit.service';
+import type { UsersRepository } from '../users/users.repository';
 import type {
   TrainingCreateData,
   TrainingListFilter,
@@ -39,7 +41,31 @@ function trainingWith(status: TrainingStatus, moduleCount = 1): TrainingWithModu
   };
 }
 
-function repositoryFor(training: TrainingWithModules | null) {
+/** Repositório de auditoria controlável, para exercitar o caminho de falha. */
+function auditRepositoryStub(options: { available?: boolean; fails?: boolean } = {}) {
+  const { available = true, fails = false } = options;
+
+  return {
+    isAvailable: vi.fn(() => available),
+    create: fails
+      ? vi.fn(() => Promise.reject(new Error('Mongo fora do ar')))
+      : vi.fn(() => Promise.resolve()),
+    findMany: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
+  };
+}
+
+function usersRepositoryStub(): UsersRepository {
+  return {
+    findByEmail: vi.fn(),
+    findById: vi.fn(() => Promise.resolve({ id: MANAGER.id, name: 'Ana' } as User)),
+    findExistingIds: vi.fn(),
+  };
+}
+
+function repositoryFor(
+  training: TrainingWithModules | null,
+  auditOptions: { available?: boolean; fails?: boolean } = {},
+) {
   const repository: TrainingsRepository = {
     findMany: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
     findById: vi.fn(() => Promise.resolve(training)),
@@ -53,7 +79,16 @@ function repositoryFor(training: TrainingWithModules | null) {
     countAssessmentQuestions: vi.fn(() => Promise.resolve(null)),
   };
 
-  return { repository, service: createTrainingsService(repository) };
+  const audit = auditRepositoryStub(auditOptions);
+
+  return {
+    repository,
+    audit,
+    service: createTrainingsService(
+      repository,
+      createAuditService({ audit, users: usersRepositoryStub() }),
+    ),
+  };
 }
 
 function filterOf(repository: TrainingsRepository): TrainingListFilter {
@@ -169,7 +204,7 @@ describe('transições de status', () => {
   ])('permite %s → %s', async (from, to) => {
     const { repository, service } = repositoryFor(trainingWith(from));
 
-    await service.changeStatus('training-1', to);
+    await service.changeStatus('training-1', to, MANAGER);
 
     expect(repository.update).toHaveBeenCalledWith('training-1', { status: to });
   });
@@ -181,7 +216,7 @@ describe('transições de status', () => {
   ])('recusa %s → %s', async (from, to) => {
     const { service } = repositoryFor(trainingWith(from));
 
-    await expect(service.changeStatus('training-1', to)).rejects.toMatchObject({
+    await expect(service.changeStatus('training-1', to, MANAGER)).rejects.toMatchObject({
       statusCode: 409,
       code: 'INVALID_STATUS_TRANSITION',
     });
@@ -190,7 +225,7 @@ describe('transições de status', () => {
   it('recusa publicar treinamento sem módulos', async () => {
     const { service } = repositoryFor(trainingWith(DRAFT, 0));
 
-    await expect(service.changeStatus('training-1', PUBLISHED)).rejects.toMatchObject({
+    await expect(service.changeStatus('training-1', PUBLISHED, MANAGER)).rejects.toMatchObject({
       statusCode: 409,
       code: 'TRAINING_WITHOUT_MODULES',
     });
@@ -199,7 +234,7 @@ describe('transições de status', () => {
   it('arquivar não exige módulos', async () => {
     const { repository, service } = repositoryFor(trainingWith(DRAFT, 0));
 
-    await service.changeStatus('training-1', ARCHIVED);
+    await service.changeStatus('training-1', ARCHIVED, MANAGER);
 
     expect(repository.update).toHaveBeenCalledWith('training-1', { status: ARCHIVED });
   });
@@ -207,9 +242,76 @@ describe('transições de status', () => {
   it('mudar para o status atual é no-op, sem escrita', async () => {
     const { repository, service } = repositoryFor(trainingWith(PUBLISHED));
 
-    await expect(service.changeStatus('training-1', PUBLISHED)).resolves.toMatchObject({
+    await expect(service.changeStatus('training-1', PUBLISHED, MANAGER)).resolves.toMatchObject({
       status: PUBLISHED,
     });
     expect(repository.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('auditoria da mudança de status', () => {
+  it.each([
+    [PUBLISHED, 'PUBLISH_TRAINING'],
+    [ARCHIVED, 'ARCHIVE_TRAINING'],
+  ])('registra %s como %s', async (status, action) => {
+    const { audit, service } = repositoryFor(trainingWith(DRAFT));
+
+    await service.changeStatus('training-1', status, MANAGER);
+
+    expect(audit.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action,
+        resourceType: 'Training',
+        resourceId: 'training-1',
+        userId: MANAGER.id,
+        userName: 'Ana',
+      }),
+    );
+  });
+
+  it('não registra quando a transição é no-op', async () => {
+    const { audit, service } = repositoryFor(trainingWith(PUBLISHED));
+
+    await service.changeStatus('training-1', PUBLISHED, MANAGER);
+
+    expect(audit.create).not.toHaveBeenCalled();
+  });
+
+  it('não registra quando a transição é recusada', async () => {
+    const { audit, service } = repositoryFor(trainingWith(PUBLISHED));
+
+    await expect(service.changeStatus('training-1', DRAFT, MANAGER)).rejects.toThrow();
+    expect(audit.create).not.toHaveBeenCalled();
+  });
+
+  // ADR 006: auditoria é registro secundário e não pode derrubar o negócio.
+  it('publica normalmente mesmo com a escrita de auditoria falhando', async () => {
+    const { repository, audit, service } = repositoryFor(trainingWith(DRAFT), { fails: true });
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(service.changeStatus('training-1', PUBLISHED, MANAGER)).resolves.toMatchObject({
+      status: PUBLISHED,
+    });
+
+    expect(repository.update).toHaveBeenCalledWith('training-1', { status: PUBLISHED });
+    expect(audit.create).toHaveBeenCalled();
+    expect(stderr).toHaveBeenCalledOnce();
+
+    stderr.mockRestore();
+  });
+
+  it('publica normalmente com o Mongo indisponível', async () => {
+    const { repository, audit, service } = repositoryFor(trainingWith(DRAFT), { available: false });
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(service.changeStatus('training-1', PUBLISHED, MANAGER)).resolves.toMatchObject({
+      status: PUBLISHED,
+    });
+
+    expect(repository.update).toHaveBeenCalled();
+    expect(audit.create).not.toHaveBeenCalled();
+    expect(stderr).toHaveBeenCalledOnce();
+
+    stderr.mockRestore();
   });
 });

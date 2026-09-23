@@ -26,7 +26,7 @@ export function createAttemptsController(service: AttemptsService = attemptsServ
     const { id } = enrollmentIdParamSchema.parse(req.params);
     const input = unlockAttemptsSchema.parse(req.body);
 
-    res.status(200).json(await service.unlock(id, input));
+    res.status(200).json(await service.unlock(id, input, getAuthenticatedUser(req)));
   };
 
   return { submit, list, unlock };
