@@ -247,6 +247,7 @@ export function toDetailView(enrollment: EnrollmentDetail) {
     modules: enrollment.training.modules.map((module) => ({
       id: module.id,
       title: module.title,
+      content: module.content,
       duration: module.duration,
       position: module.position,
       materialUrl: module.materialUrl,

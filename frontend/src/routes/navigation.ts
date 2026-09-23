@@ -4,7 +4,6 @@ export const PATHS = {
   login: '/login',
   home: '/inicio',
   myTrainings: '/meus-treinamentos',
-  catalog: '/treinamentos',
   team: '/equipe',
   assign: '/atribuir',
   audit: '/auditoria',
@@ -34,11 +33,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Meus Treinamentos',
     to: PATHS.myTrainings,
     icon: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5.5A1.5 1.5 0 0 1 4 18.5v-13Zm4 2.5h8M8 12h8',
-  },
-  {
-    label: 'Catálogo',
-    to: PATHS.catalog,
-    icon: 'M4 6h16M4 12h16M4 18h10',
   },
   {
     label: 'Equipe',
